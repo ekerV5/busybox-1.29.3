@@ -1,3 +1,74 @@
-使用方法：
+制作busybox文件系统：
+
+1.配置、编译
 cp eker210_config .config
 make && make install
+
+2.把_install目录下所有文件拷贝到nfsroot目录
+cp _install/* ~/nfsroot -a
+
+3.把examples/bootfloppy/etc/目录拷贝到nfsroot目录
+cp exmples/bootfloppy/etc/ ~/nfsroot -r
+
+4.把PC系统的“/etc/passwd”、“/etc/group”、“/etc/shadow”拷贝到“nfsroot/etc/”目录
+sudo cp /etc/passwd ~/nfsroot/etc/
+sudo cp /etc/group ~/nfsroot/etc/
+sudo cp /etc/shadow ~/nfsroot/etc/
+
+5.在passwd文件末尾添加一行
+root:x:0:0:root:/root:/bin/ash
+
+6.创建相关目录
+mkdir dev lib mnt proc root sys tmp var
+
+7.创建设备节点
+sudo mknod dev/console c 5 1
+sudo mknod dev/null c 1 3
+
+8.拷贝交叉编译器的库到“nfsroot/lib/”目录
+cp ~/bin/arm-cortex_a8-linux-gnueabi-4.7.3/arm-cortex_a8-linux-gnueabi/sysroot/lib/*.so* lib/ -a
+cp ~/bin/arm-cortex_a8-linux-gnueabi-4.7.3/arm-cortex_a8-linux-gnueabi/sysroot/usr/lib/*.so* lib/ -a
+
+9.修改“etc/inittab”文件
+::sysinit:/etc/init.d/rcS
+console::askfirst:-/bin/sh
+tty0::askfirst:-/bin/sh
+::ctrlaltdel:/sbin/reboot
+::shutdown:/bin/umount -a -r
+
+10.修改“etc/fstab”文件
+#device         mount-point     type    options         dump    fsck order
+proc            /proc           proc    defaults        0       0
+tmpfs           /tmp            tmpfs   defaults        0       0
+sysfs           /sys            sysfs   defaults        0       0
+tmpfs           /dev            tmpfs   defaults        0       0
+
+11.修改“etc/init.d/rcS”文件
+#! /bin/sh
+#This is the first script called by init process
+/bin/mount -a
+mkdir /dev/pts
+mount -t devpts devpts /dev/pts
+echo /sbin/mdev>/proc/sys/kernel/hotplug
+mdev -s
+
+12.修改“etc/profile”文件
+# /etc/profile: system-wide .profile file for the Bourne shells
+#!/bin/sh
+hostname eker210
+HOSTNAME='hostname'
+USER='id -un'
+LOGNAME=$USER
+HOME=$USER
+PS1="[\u@\h:\w]\#"
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
+LD_LIBRARY_PATH=/lib:/usr/lib:$LD_LIBRARY_PATH
+export HOSTNAME USER LOGNAME HOME PS1 PARH LD_LIBRARY_PATH
+alias ll="ls -l"
+
+echo
+echo -n "Processing /etc/profile... "
+echo
+echo "Done"
+echo
+
