@@ -1,0 +1,3 @@
+使用方法：
+cp eker210_config .config
+make && make install
